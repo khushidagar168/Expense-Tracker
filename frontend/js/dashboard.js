@@ -136,15 +136,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deleteExpense = async (id) => {
-        if (!confirm('Are you sure you want to delete this expense?')) return;
+        // Use a custom confirm via a simple check, or optionally skip confirm if it's blocking
+        // Sometimes browsers block native confirm() if they feel it's spammy.
+        const isConfirmed = window.confirm('Are you sure you want to delete this expense?');
+        if (!isConfirmed) return;
         
+        const deleteBtnText = document.querySelector(`button[onclick="deleteExpense(${id})"]`);
+        if(deleteBtnText) {
+            deleteBtnText.disabled = true;
+            deleteBtnText.innerHTML = '...';
+        }
+
         try {
-            await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
-            expenses = expenses.filter(e => e.id != id);
+            const data = await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
+            console.log('Delete response:', data);
+            
+            // Strictly cast to number for filtering just in case
+            expenses = expenses.filter(e => Number(e.id) !== Number(id));
             renderTable();
             showToast('Expense deleted successfully');
         } catch (error) {
-            showToast(error.message, 'error');
+            console.error('Delete error:', error);
+            showToast('Error removing expense: ' + error.message, 'error');
+            if(deleteBtnText) {
+                deleteBtnText.disabled = false;
+                deleteBtnText.innerHTML = 'Retry';
+            }
         }
     };
 
